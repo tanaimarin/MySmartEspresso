@@ -25,9 +25,12 @@ v0.1: send a simple text message
 
 */
 int ThermistorPin = 0;
+int PressurePin = 1;
 int Vo;
+int AR1;
 float R1 = 10000;
 float logR2, R2, T;
+float V1;
 float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.019202697e-07;
 
 void setup() {
@@ -43,17 +46,35 @@ void setup() {
 }
 
 void loop() {
-
+  //Read analog pins
   Vo = analogRead(ThermistorPin);
+  AR1 = analogRead(PressurePin);
+
+  Serial.print("Vo :");
+  Serial.print(Vo);
+
+  Serial.print(", A1 :");
+  Serial.print(AR1);
+
+  //Calculate R for thermistor from voltage divider
   R2 = R1 * (1023.0 / (float)Vo - 1.0);
+  Serial.print(", R2 :");
+  Serial.print(R2);
+  
   logR2 = log(R2);
   T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
   T = T - 273.15;
   
-  Serial.print("Temperature: "); 
+  Serial.print(", Temperature: "); 
   Serial.print(T);
-  Serial.println(" C"); 
+  Serial.print(" C"); 
 
+  //Calculate Voltage for pressure:
+  V1 = float(AR1)/1023.0*5.0;
+  Serial.print(", V1:");
+  Serial.println(V1);
+  
+  //Print to LCD:
   Serial1.write(0xFE);
   Serial1.write(0x51);//cursor blink on
   Serial1.print(" Temperature (C): ");
