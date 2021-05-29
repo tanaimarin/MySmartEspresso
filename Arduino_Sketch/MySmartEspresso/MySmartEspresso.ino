@@ -37,6 +37,7 @@ void setup() {
   //Initialize serial and wait for port to open:
   Serial.begin(9600); //to Serial Monitor
   Serial1.begin(9600); //to LCD
+  Serial2.begin(9600); //to BT HC-06
 
   Serial1.write(0xFE);
   Serial1.write(0x41);//Turn On
@@ -82,7 +83,19 @@ void loop() {
   Serial1.write(0x45);
   Serial1.write(0x28);
   Serial1.print(T);
+
+  //Print to BT:
+  Serial2.println(T);
+
+  //Mirror BT to Serial monitor
+  if (Serial2.available()){
+    Serial.write(Serial2.read());
+  }
   
+  //read from Serial monitor and write to BT
+  //if (Serial.available()){
+   // Serial2.write(Serial.read());
+  //}
 
   delay(500);
   Serial1.write(0xFE);
