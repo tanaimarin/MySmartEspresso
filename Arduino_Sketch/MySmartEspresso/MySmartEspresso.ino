@@ -24,14 +24,24 @@ Arduino A0 to common 100k and thermistor leg
 v0.1: send a simple text message
 
 */
+//Define general constants
+const float pi = 3.141593;
+
+//Declare variables
 int ThermistorPin = 0;
 int PressurePin = 1;
 int Vo;
 int AR1;
 float R1 = 10000;
 float logR2, R2, T;
+float T_float_lpf, T_float_old=20;
 float V1;
 float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.019202697e-07;
+
+//Declare variables for digital low pass filter (two chanels)
+float dt = 0.5; //interval in s for low pass filter
+float fc1 = 0.05;
+float RC1, alpha1;
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -44,6 +54,14 @@ void setup() {
   Serial1.write(0xFE);
   Serial1.write(0x46);//cursor home
   Serial1.print("Temperature (C): ");
+
+  //measure initial T to initialize low pass filter variables
+  //Calculate R for thermistor from voltage divider
+  Vo = analogRead(ThermistorPin);
+  R2 = R1 * (1023.0 / (float)Vo - 1.0);
+  logR2 = log(R2);
+  T_float_old = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+  T_float_old = T_float_old - 273.15;
 }
 
 void loop() {
@@ -52,19 +70,26 @@ void loop() {
   AR1 = analogRead(PressurePin);
 
   Serial.print("Vo :");
-  Serial.print(Vo);
+  //Serial.print(Vo);
 
   Serial.print(", A1 :");
-  Serial.print(AR1);
+  //Serial.print(AR1);
 
   //Calculate R for thermistor from voltage divider
   R2 = R1 * (1023.0 / (float)Vo - 1.0);
   Serial.print(", R2 :");
-  Serial.print(R2);
+  //Serial.print(R2);
   
   logR2 = log(R2);
   T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
   T = T - 273.15;
+  Serial.print(T);
+  //Apply low pass filter to T
+  RC1 = 1/(2*pi*fc1);
+  alpha1 = dt/(dt+RC1);
+  T_float_lpf = alpha1*T + (1-alpha1)*T_float_old; //value for T after applying low pass filter
+  T_float_old = T_float_lpf;
+  T = T_float_lpf;
   
   Serial.print(", Temperature: "); 
   Serial.print(T);
