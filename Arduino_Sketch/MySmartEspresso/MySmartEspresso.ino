@@ -30,6 +30,7 @@ const float pi = 3.141593;
 //Declare variables
 int ThermistorPin = 0;
 int PressurePin = 1;
+int SSRPin = 2;
 int Vo;
 int AR1;
 float R1 = 10000;
@@ -37,6 +38,7 @@ float logR2, R2, T;
 float T_float_lpf, T_float_old=20;
 float V1;
 float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.019202697e-07;
+bool heating = false;
 
 //Declare variables for digital low pass filter (two chanels)
 float dt = 0.5; //interval in s for low pass filter
@@ -62,6 +64,10 @@ void setup() {
   logR2 = log(R2);
   T_float_old = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
   T_float_old = T_float_old - 273.15;
+
+  //Set SSR pin mode to out
+  pinMode(SSRPin, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void loop() {
@@ -84,6 +90,7 @@ void loop() {
   T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
   T = T - 273.15;
   Serial.print(T);
+  
   //Apply low pass filter to T
   RC1 = 1/(2*pi*fc1);
   alpha1 = dt/(dt+RC1);
@@ -121,6 +128,21 @@ void loop() {
   //if (Serial.available()){
    // Serial2.write(Serial.read());
   //}
+
+
+  //SSR heater output
+  if(!heating){
+    digitalWrite(SSRPin, HIGH);
+    digitalWrite(LED_BUILTIN, HIGH);
+    heating = true;
+  }
+  else {
+    digitalWrite(SSRPin, LOW);
+    digitalWrite(LED_BUILTIN, LOW);
+    heating = LOW;
+  }
+  
+  
 
   delay(500);
   Serial1.write(0xFE);
