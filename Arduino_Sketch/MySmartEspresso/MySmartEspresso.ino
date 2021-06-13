@@ -24,6 +24,9 @@ Arduino A0 to common 100k and thermistor leg
 v0.1: send a simple text message
 
 */
+
+#include <PID_v1.h>
+
 //Define general constants
 const float pi = 3.141593;
 const float P_FS = 12; //max pressure scale 
@@ -41,7 +44,7 @@ int Vo;
 int AR1, P1;
 float m1, n1; //proportional constants to calculate P
 float R1 = 10000;
-float logR2, R2, T;
+double logR2, R2, T;
 float T_float_lpf, T_float_old=20;
 float V1;
 float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.019202697e-07;
@@ -56,7 +59,7 @@ unsigned long SSRmillis = 0;
 unsigned long SSRelapsed = 0;
 unsigned long SSRprevious = 0;
 float SSRperiod = (float)n_cycles/(float)F*1000.0; //100 x period in milliseconds
-float SSROnTime = 0; //percent of period that SSR is ON
+double SSROnTime = 0; //percent of period that SSR is ON
 
 //Declare variables for digital low pass filter (two chanels)
 float dt = (float)t_sample/1000; //interval in s for low pass filter
@@ -68,6 +71,12 @@ String inputString = "";
 //String textString = "";
 boolean stringComplete = false;
 String SSR_SP = "";
+
+//PID Variables and class for T control
+//Specify the links and initial tuning parameters
+double T_SP = 35.0;
+double Kp=2, Ki=5, Kd=1;
+PID myPID(&T, &SSROnTime, &T_SP, Kp, Ki, Kd, DIRECT);
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -96,6 +105,11 @@ void setup() {
   //Set SSR pin mode to out
   pinMode(SSRPin, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
+
+  //PID Setup
+  T_SP = 35.0;
+  myPID.SetOutputLimits(0, 100); //PID output range is 0-100% of power (on time)
+  myPID.SetMode(AUTOMATIC);
 }
 
 void loop() {
@@ -106,10 +120,12 @@ void loop() {
   if(stringComplete){
     stringComplete = false; //reset input string
     SSR_SP = inputString;
-    SSROnTime = SSR_SP.toFloat();
-    SSROnTime = constrain(SSROnTime, 0.0, 100.0);
+    //SSROnTime = SSR_SP.toFloat();
+    T_SP = SSR_SP.toDouble();
+    //SSROnTime = constrain(SSROnTime, 0.0, 100.0);
+    T_SP = constrain(T_SP,0.0,110);
     Serial.print("SP= ");
-    Serial.println(SSROnTime);
+    Serial.println(T_SP);
 
     //reset inputString
     inputString = "";
@@ -181,6 +197,11 @@ void loop() {
     Serial.print(", Temperature: "); 
     Serial.print(T);
     Serial.print(" C"); 
+
+    //Call PID compute function
+    myPID.Compute();
+    Serial.print(" SSR_out:");
+    Serial.print(SSROnTime);
   
     //Calculate Voltage for pressure:
     V1 = float(AR1)/1023.0*5.0;
