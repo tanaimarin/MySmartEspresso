@@ -40,6 +40,8 @@ const int n_cycles = 50; //number of cycles per period of control
 int ThermistorPin = 0;
 int PressurePin = 1;
 int SSRPin = 2;
+int PWMPin = 9; //488Hz PWM connected to 4N25 Optocoupler, to control IGBT in
+byte PWMOut = 0; //0-255 analog out for PWM, mapped from SSROutput (0-100% of power)
 int Vo;
 int AR1, P1;
 float m1, n1; //proportional constants to calculate P
@@ -74,7 +76,7 @@ String SSR_SP = "";
 
 //PID Variables and class for T control
 //Specify the links and initial tuning parameters
-double T_SP = 35.0;
+double T_SP = 25.0;
 double Kp=2, Ki=5, Kd=1;
 PID myPID(&T, &SSROnTime, &T_SP, Kp, Ki, Kd, DIRECT);
 
@@ -107,7 +109,7 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
 
   //PID Setup
-  T_SP = 35.0;
+  //T_SP = 25.0;
   myPID.SetOutputLimits(0, 100); //PID output range is 0-100% of power (on time)
   myPID.SetMode(AUTOMATIC);
 }
@@ -198,10 +200,18 @@ void loop() {
     Serial.print(T);
     Serial.print(" C"); 
 
+    Serial.print(", T_SP: "); 
+    Serial.print(T_SP);
+
     //Call PID compute function
     myPID.Compute();
     Serial.print(" SSR_out:");
     Serial.print(SSROnTime);
+    PWMOut = SSROnTime/100*255;
+    PWMOut = constrain(PWMOut,0,255);
+    analogWrite(PWMPin,PWMOut);
+    Serial.print(" PWM_out:");
+    Serial.print(PWMOut);
   
     //Calculate Voltage for pressure:
     V1 = float(AR1)/1023.0*5.0;
